@@ -38,13 +38,17 @@ detectResetPort p@VerilogPort{..} =
 
 detectAXI4Port :: DetectPort
 detectAXI4Port p@VerilogPort{..} =
-  case portName =~ "\\<ax([ms])_((.+)_)*(.+)" :: RegexRetType of
+  case portName =~ "\\<ax(l?)([ms])_((.+)_)*(.+)" :: RegexRetType of
     RegexMatches matches -> Just $ go matches
     _ -> Nothing
-  where go ["m", _,    "", signm] = AXI4MPort "axi4_m" signm p
-        go ["s", _,    "", signm] = AXI4SPort "axi4_s" signm p
-        go ["m", _, ifcnm, signm] = AXI4MPort ifcnm signm p
-        go ["s", _, ifcnm, signm] = AXI4SPort ifcnm signm p
+  where go ["", "m", _,    "", signm] = AXI4MPort "axi4_m" signm p
+        go ["", "s", _,    "", signm] = AXI4SPort "axi4_s" signm p
+        go ["", "m", _, ifcnm, signm] = AXI4MPort ifcnm signm p
+        go ["", "s", _, ifcnm, signm] = AXI4SPort ifcnm signm p
+        go ["l", "m", _,    "", signm] = AXI4LiteMPort "axi4_m" signm p
+        go ["l", "s", _,    "", signm] = AXI4LiteSPort "axi4_s" signm p
+        go ["l", "m", _, ifcnm, signm] = AXI4LiteMPort ifcnm signm p
+        go ["l", "s", _, ifcnm, signm] = AXI4LiteSPort ifcnm signm p
 
 detectConduitPort :: DetectPort
 detectConduitPort p = Just $ ConduitPort p
@@ -74,12 +78,17 @@ detectIfcs ports = runST do
               return (iNm, fromMaybe (newAXI4Ifc clk rst) (M.lookup iNm mp))
             AXI4SPort iNm _ _ ->
               return (iNm, fromMaybe (newAXI4Ifc clk rst) (M.lookup iNm mp))
+            AXI4LiteMPort iNm _ _ ->
+              return (iNm, fromMaybe (newAXI4LiteIfc clk rst) (M.lookup iNm mp))
+            AXI4LiteSPort iNm _ _ ->
+              return (iNm, fromMaybe (newAXI4LiteIfc clk rst) (M.lookup iNm mp))
             ConduitPort vp -> return (portName vp, newConduitIfc clk rst)
           go clkRef rstRef ps (M.insert nm ifc{ifcPorts = p : ifcPorts ifc} mp)
-        newClkIfc             = Ifc Nothing Nothing [] Clock
-        newRstIfc     clk     = Ifc     clk Nothing [] Reset
-        newAXI4Ifc    clk rst = Ifc     clk     rst [] AXI4
-        newConduitIfc clk rst = Ifc     clk     rst [] Conduit
+        newClkIfc              = Ifc Nothing Nothing [] Clock
+        newRstIfc      clk     = Ifc     clk Nothing [] Reset
+        newAXI4Ifc     clk rst = Ifc     clk     rst [] AXI4
+        newAXI4LiteIfc clk rst = Ifc     clk     rst [] AXI4Lite
+        newConduitIfc  clk rst = Ifc     clk     rst [] Conduit
 
 inferInterfaces :: VerilogModule -> VerilogModuleWithIfc
 inferInterfaces VerilogModule{..} = VerilogModuleWithIfc modName modIfcs

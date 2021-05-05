@@ -19,3 +19,4 @@ main = do
   let allModIfcs = inferInterfaces <$> allVerilogModules
   forM_ allModIfcs \x -> do
     putStrLn $ prettyQSYSTCL x
+    --print x
