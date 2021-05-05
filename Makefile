@@ -7,6 +7,8 @@ SRCS += $(SRC_DIR)/VerilogFiddle/InterfaceInference.hs
 SRCS += $(SRC_DIR)/VerilogFiddle/Parse.hs
 SRCS += $(SRC_DIR)/VerilogFiddle/Types.hs
 
+.PHONY: all
+
 all: verilog-fiddle
 
 verilog-fiddle: $(SRCS)

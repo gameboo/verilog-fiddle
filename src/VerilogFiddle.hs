@@ -17,4 +17,5 @@ main = do
   fileName <- (!! 0) <$> getArgs
   allVerilogModules <- parseVerilogFile fileName
   let allModIfcs = inferInterfaces <$> allVerilogModules
-  forM_ allModIfcs print
+  forM_ allModIfcs \x -> do
+    putStrLn $ prettyQSYSTCL x

@@ -27,13 +27,13 @@ type DetectPort = VerilogPort -> Maybe VerilogPortWithIfc
 
 detectClockPort :: DetectPort
 detectClockPort p@VerilogPort{..} =
-  if portName =~ "\\<(clk|CLK)(_(.*))?" then Just $ Clock p else Nothing
+  if portName =~ "\\<(clk|CLK)(_(.*))?" then Just $ ClockPort p else Nothing
 
 detectResetPort :: DetectPort
 detectResetPort p@VerilogPort{..} =
   case portName =~ "\\<(rst|RST)(_(n|N))?(_(.*))?" :: RegexRetType of
-    RegexMatches [_,_,"",_,_] -> Just $ Reset False p
-    RegexMatches [_,_, _,_,_] -> Just $ Reset  True p
+    RegexMatches [_,_,"",_,_] -> Just $ ResetPort False p
+    RegexMatches [_,_, _,_,_] -> Just $ ResetPort  True p
     _ -> Nothing
 
 detectAXI4Port :: DetectPort
@@ -41,20 +41,20 @@ detectAXI4Port p@VerilogPort{..} =
   case portName =~ "\\<ax([ms])_((.+)_)*(.+)" :: RegexRetType of
     RegexMatches matches -> Just $ go matches
     _ -> Nothing
-  where go ["m", _,    "", signm] = AXI4_M "axi4_m" signm p
-        go ["s", _,    "", signm] = AXI4_S "axi4_s" signm p
-        go ["m", _, ifcnm, signm] = AXI4_M ifcnm signm p
-        go ["s", _, ifcnm, signm] = AXI4_S ifcnm signm p
+  where go ["m", _,    "", signm] = AXI4MPort "axi4_m" signm p
+        go ["s", _,    "", signm] = AXI4SPort "axi4_s" signm p
+        go ["m", _, ifcnm, signm] = AXI4MPort ifcnm signm p
+        go ["s", _, ifcnm, signm] = AXI4SPort ifcnm signm p
 
-detectLonePort :: DetectPort
-detectLonePort p = Just $ LonePort p
+detectConduitPort :: DetectPort
+detectConduitPort p = Just $ ConduitPort p
 
 detectPortIfcs :: [VerilogPort] -> [VerilogPortWithIfc]
 detectPortIfcs = fmap (fromMaybe (error "port detection error") . detectIfc)
   where detectIfc p = asum [ detectClockPort p
                            , detectResetPort p
                            , detectAXI4Port p
-                           , detectLonePort p ]
+                           , detectConduitPort p ]
 
 detectIfcs :: [VerilogPortWithIfc] -> M.Map String Ifc
 detectIfcs ports = runST do
@@ -66,20 +66,20 @@ detectIfcs ports = runST do
           clk <- readSTRef clkRef
           rst <- readSTRef rstRef
           (nm, ifc) <- case p of
-            Clock vp -> do writeSTRef clkRef $ Just p
-                           return (portName vp, newClkIfc)
-            Reset _ vp -> do writeSTRef rstRef $ Just p
-                             return (portName vp, newRstIfc)
-            AXI4_M iNm _ _ ->
+            ClockPort vp -> do writeSTRef clkRef $ Just p
+                               return (portName vp, newClkIfc)
+            ResetPort _ vp -> do writeSTRef rstRef $ Just p
+                                 return (portName vp, newRstIfc clk)
+            AXI4MPort iNm _ _ ->
               return (iNm, fromMaybe (newAXI4Ifc clk rst) (M.lookup iNm mp))
-            AXI4_S iNm _ _ ->
+            AXI4SPort iNm _ _ ->
               return (iNm, fromMaybe (newAXI4Ifc clk rst) (M.lookup iNm mp))
-            LonePort vp -> return (portName vp, newLoneIfc clk rst)
+            ConduitPort vp -> return (portName vp, newConduitIfc clk rst)
           go clkRef rstRef ps (M.insert nm ifc{ifcPorts = p : ifcPorts ifc} mp)
-        newClkIfc = Ifc Nothing Nothing [] "clock"
-        newRstIfc = Ifc Nothing Nothing [] "reset"
-        newAXI4Ifc clk rst = Ifc clk rst [] "axi4"
-        newLoneIfc clk rst = Ifc clk rst [] "lone"
+        newClkIfc             = Ifc Nothing Nothing [] Clock
+        newRstIfc     clk     = Ifc     clk Nothing [] Reset
+        newAXI4Ifc    clk rst = Ifc     clk     rst [] AXI4
+        newConduitIfc clk rst = Ifc     clk     rst [] Conduit
 
 inferInterfaces :: VerilogModule -> VerilogModuleWithIfc
 inferInterfaces VerilogModule{..} = VerilogModuleWithIfc modName modIfcs

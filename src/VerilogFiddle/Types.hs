@@ -1,7 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module VerilogFiddle.Types (
-  VerilogPortDir (..)
+  PortDir (..)
+, IfcType (..)
 , VerilogPort (..)
 , VerilogModule (..)
 , VerilogPortWithIfc (..)
@@ -13,14 +14,20 @@ import Prelude hiding ((<>))
 import Data.Map hiding (empty)
 import Text.PrettyPrint
 
-data VerilogPortDir = In | Out
-instance Show VerilogPortDir where
+data PortDir = In | Out deriving Eq
+instance Show PortDir where
   show In  = "Input"
   show Out = "Output"
+data IfcType = Clock | Reset | AXI4 | Conduit deriving Eq
+instance Show IfcType where
+  show Clock = "clock"
+  show Reset = "reset"
+  show AXI4 = "axi4"
+  show Conduit = "conduit"
 
 data VerilogPort = VerilogPort {
   portName      :: String
-, portDirection :: VerilogPortDir
+, portDirection :: PortDir
 , portWidth     :: Integer }
 docVerilogPort :: VerilogPort -> Doc
 docVerilogPort VerilogPort{..} =
@@ -39,27 +46,27 @@ docVerilogModule VerilogModule{..} =
 instance Show VerilogModule where show = render . docVerilogModule
 
 data VerilogPortWithIfc =
-    Clock VerilogPort
-  | Reset Bool VerilogPort
-  | AXI4_M String String VerilogPort -- ifc name, axi4 standard sig name, full sig
-  | AXI4_S String String VerilogPort -- ifc name, axi4 standard sig name, full sig
-  | LonePort VerilogPort
+    ClockPort VerilogPort
+  | ResetPort Bool VerilogPort
+  | AXI4MPort String String VerilogPort -- ifc name, axi4 standard sig name, full sig
+  | AXI4SPort String String VerilogPort -- ifc name, axi4 standard sig name, full sig
+  | ConduitPort VerilogPort
 docVerilogPortWithIfc :: VerilogPortWithIfc -> Doc
-docVerilogPortWithIfc (Clock vp) =
+docVerilogPortWithIfc (ClockPort vp) =
   hsep [ text "Clock", text "--", docVerilogPort vp ]
-docVerilogPortWithIfc (Reset activLo vp) =
+docVerilogPortWithIfc (ResetPort activLo vp) =
   hsep [ text "Reset"
        , if activLo then text "[Active Low]" else empty
        , text "--", docVerilogPort vp ]
-docVerilogPortWithIfc (AXI4_M _ sNm vp) =
+docVerilogPortWithIfc (AXI4MPort _ sNm vp) =
   hsep [ text "AXI4 Master", text "-"
        , text sNm, text "--"
        , docVerilogPort vp ]
-docVerilogPortWithIfc (AXI4_S _ sNm vp) =
+docVerilogPortWithIfc (AXI4SPort _ sNm vp) =
   hsep [ text "AXI4 Slave", text "-"
        , text sNm, text "--"
        , docVerilogPort vp ]
-docVerilogPortWithIfc (LonePort vp) =
+docVerilogPortWithIfc (ConduitPort vp) =
   hsep [ text "<no interface>", text "--", docVerilogPort vp ]
 instance Show VerilogPortWithIfc where show = render . docVerilogPortWithIfc
 
@@ -67,14 +74,13 @@ data Ifc = Ifc {
   ifcClock :: Maybe VerilogPortWithIfc
 , ifcReset :: Maybe VerilogPortWithIfc
 , ifcPorts :: [VerilogPortWithIfc]
-, ifcType  :: String }
+, ifcType  :: IfcType }
 docIfc :: Ifc -> Doc
 docIfc Ifc{..} =
-  hang (text ifcType <+> text "(interface)") 2
+  hang (text (show ifcType) <+> text "(interface)") 2
        (vcat [ case ifcClock of
                  Just p -> text "associated clock:" <+> docVerilogPortWithIfc p
-                 Nothing -> text "no associated clock"
-             , case ifcReset of
+                 Nothing -> text "no associated clock" , case ifcReset of
                  Just p -> text "associated reset:" <+> docVerilogPortWithIfc p
                  Nothing -> text "no associated reset"
              , sep $ (text "ports:") : fmap docVerilogPortWithIfc ifcPorts ])
