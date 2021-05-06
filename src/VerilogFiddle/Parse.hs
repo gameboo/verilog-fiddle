@@ -1,7 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
 
 module VerilogFiddle.Parse (
-  parseVerilogFile
+  parseVerilog
 ) where
 
 import Text.Parsec
@@ -84,9 +84,7 @@ parseAll = do
   skipTill eof
   return res
 
-parseVerilogFile :: FilePath -> IO [VerilogModule]
-parseVerilogFile fp = do
-  src <- readFile fp
-  return case parse parseAll fp src of
-           Left  e -> error $ fp ++ ": " ++ show e ++ "\n"
-           Right x -> x
+parseVerilog :: FilePath -> String -> [VerilogModule]
+parseVerilog fp src = case parse parseAll fp src of
+                     Left  e -> error $ fp ++ ": " ++ show e ++ "\n"
+                     Right x -> x

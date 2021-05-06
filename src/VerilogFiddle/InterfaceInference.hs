@@ -39,16 +39,17 @@ detectResetPort p@VerilogPort{..} =
 detectAXI4Port :: DetectPort
 detectAXI4Port p@VerilogPort{..} =
   case portName =~ "\\<ax(l?)([ms])_((.+)_)*(.+)" :: RegexRetType of
-    RegexMatches matches -> Just $ go matches
+    RegexMatches matches -> go matches
     _ -> Nothing
-  where go ["", "m", _,    "", signm] = AXI4MPort "axi4_m" signm p
-        go ["", "s", _,    "", signm] = AXI4SPort "axi4_s" signm p
-        go ["", "m", _, ifcnm, signm] = AXI4MPort ifcnm signm p
-        go ["", "s", _, ifcnm, signm] = AXI4SPort ifcnm signm p
-        go ["l", "m", _,    "", signm] = AXI4LiteMPort "axi4_m" signm p
-        go ["l", "s", _,    "", signm] = AXI4LiteSPort "axi4_s" signm p
-        go ["l", "m", _, ifcnm, signm] = AXI4LiteMPort ifcnm signm p
-        go ["l", "s", _, ifcnm, signm] = AXI4LiteSPort ifcnm signm p
+  where go ["", "m", _,    "", signm] = Just $ AXI4MPort "axi4_m" signm p
+        go ["", "s", _,    "", signm] = Just $ AXI4SPort "axi4_s" signm p
+        go ["", "m", _, ifcnm, signm] = Just $ AXI4MPort ifcnm signm p
+        go ["", "s", _, ifcnm, signm] = Just $ AXI4SPort ifcnm signm p
+        go ["l", "m", _,    "", signm] = Just $ AXI4LiteMPort "axi4_m" signm p
+        go ["l", "s", _,    "", signm] = Just $ AXI4LiteSPort "axi4_s" signm p
+        go ["l", "m", _, ifcnm, signm] = Just $ AXI4LiteMPort ifcnm signm p
+        go ["l", "s", _, ifcnm, signm] = Just $ AXI4LiteSPort ifcnm signm p
+        go _ = Nothing
 
 detectConduitPort :: DetectPort
 detectConduitPort p = Just $ ConduitPort p
