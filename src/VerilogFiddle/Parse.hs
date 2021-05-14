@@ -59,8 +59,8 @@ parseVerilogModule = do
   where harvestPorts decls acc =
               (kw "endmodule" >> return acc)
           <|> choice [
-                  parsePortDef decls >>= \x -> harvestPorts decls $ x : acc
-                , anyChar >> harvestPorts decls acc ]
+                try (parsePortDef decls) >>= \x -> harvestPorts decls $ x : acc
+              , anyChar >> harvestPorts decls acc ]
 
 parsePortDef :: [String] -> Parser VerilogPort
 parsePortDef decls = do
