@@ -85,3 +85,6 @@ main = do
   let allModIfcs = inferInterfaces <$> allVerilogModules
   forM_ allModIfcs \x -> do
     hPutStrLn outHandle $ pretty x
+  --
+  hClose inptHandle
+  hClose outHandle
