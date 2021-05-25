@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module VerilogFiddle.PrettyQSYS (
-  prettyQSYSTCL
+module VerilogFiddle.Pretty_QUARTUS_IP_TCL (
+  pretty_QUARTUS_IP_TCL
 ) where
 
 import Data.Map hiding (empty)
@@ -47,7 +47,7 @@ prettyVerilogModuleWithIfc VerilogModuleWithIfc{..} =
     isAXI4LiteSIfc Ifc{..} =
       ifcType == AXI4Lite && case head ifcPorts of AXI4LiteSPort _ _ _ -> True
                                                    _ -> False
-    -- QSYS command helpers
+    -- Quartus platform designer command helpers
     iAssocClk iNm clk@(ClockPort VerilogPort{..})
       | portDirection == In && portWidth == 1 =
         iProp iNm "associatedClock" portName
@@ -73,7 +73,7 @@ prettyVerilogModuleWithIfc VerilogModuleWithIfc{..} =
       iPort iNm portName sNm (show portDirection) portWidth
     iIfcPort iNm (ConduitPort VerilogPort{..}) =
       iPort iNm portName portName (show portDirection) portWidth
-    -- generic QSYS TCL command helpers
+    -- generic Quartus platform designer command helpers
     mProp nm val = hsep [ text "set_module_property", text nm, text val ]
     iAdd nm ifc@Ifc{..} =
       hsep [ text "add_interface"
@@ -91,5 +91,5 @@ prettyVerilogModuleWithIfc VerilogModuleWithIfc{..} =
                                    , text iNm, text pNm, text sNm
                                    , text dir, integer w ]
 
-prettyQSYSTCL :: VerilogModuleWithIfc -> String
-prettyQSYSTCL = render . prettyVerilogModuleWithIfc
+pretty_QUARTUS_IP_TCL :: VerilogModuleWithIfc -> String
+pretty_QUARTUS_IP_TCL = render . prettyVerilogModuleWithIfc

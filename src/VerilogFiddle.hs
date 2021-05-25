@@ -3,6 +3,7 @@
 
 module Main where
 
+import Text.Read
 import System.IO
 import System.Exit
 import Control.Monad
@@ -12,17 +13,20 @@ import qualified Data.Map as M
 
 import VerilogFiddle.Types
 import VerilogFiddle.Parse
-import VerilogFiddle.PrettyQSYS
+import VerilogFiddle.Pretty_QUARTUS_IP_TCL
 import VerilogFiddle.InterfaceInference
 
 -- command line arguments
 --------------------------------------------------------------------------------
 
-data OutputFormat = QSYSTCL | TXT
+data OutputFormat = QUARTUS_IP_TCL | TXT
 
 instance Read OutputFormat where
-  readsPrec _ s =    [(QSYSTCL, r) | ("qsys_tcl", r) <- lex s]
-                  ++ [(    TXT, r) | (     "txt", r) <- lex s]
+  readPrec = do Ident "quartus_ip_tcl" <- lexP
+                return QUARTUS_IP_TCL
+             +++
+             do Ident "txt" <- lexP
+                return TXT
 
 data Options = Options { optOutputFile   :: Maybe FilePath
                        , optOutputFormat :: OutputFormat
@@ -42,7 +46,7 @@ options = [
   , Option ['f'] ["output-format"]
            (ReqArg (\arg opts -> opts { optOutputFormat = read arg })
                    "OUTPUTFORMAT")
-           "specify desired OUTPUTFORMAT, one of qsys_tcl, txt (default)"
+           "specify desired OUTPUTFORMAT, one of quartus_ip_tcl, txt (default)"
   , Option ['h'] ["help"] (NoArg \opts -> opts { optHelpAndQuit = True })
            "display help"
   ]
@@ -73,8 +77,9 @@ main = do
                     [] -> return (stdin, "stdin")
   outHandle <- case optOutputFile opts of Just f -> openFile f WriteMode
                                           Nothing -> return stdout
-  let pretty = case optOutputFormat opts of QSYSTCL -> prettyQSYSTCL
-                                            _ -> show
+  let pretty = case optOutputFormat opts of
+                 QUARTUS_IP_TCL -> pretty_QUARTUS_IP_TCL
+                 _ -> show
   --
   allVerilogModules <- parseVerilog inptFileName <$> hGetContents inptHandle
   let allModIfcs = inferInterfaces <$> allVerilogModules

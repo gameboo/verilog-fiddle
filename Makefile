@@ -1,6 +1,6 @@
-SRC_DIR = src
-HI_DIR = hidir
-O_DIR = odir
+SRC_DIR = $(CURDIR)/src
+HI_DIR = $(CURDIR)/hidir
+O_DIR = $(CURDIR)/odir
 MAIN_SRC = $(SRC_DIR)/VerilogFiddle.hs
 SRCS = $(MAIN_SRC)
 SRCS += $(SRC_DIR)/VerilogFiddle/InterfaceInference.hs
